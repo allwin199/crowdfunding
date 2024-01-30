@@ -1,0 +1,37 @@
+CrowdFunding
+├── Create Campaign
+│   ├── Reverts
+│   │   ├── If startDate is less than currentDate
+│   │   ├── If endDate greater than startDate
+│   │   └── If endDate greater than 30 days
+│   ├── Updates
+│   │   ├── s_campaigns array with new campaign
+│   │   ├── s_campaignCreatedByCreator mapping with new campaign
+│   │   └── s_campaignsCount with +1
+│   ├── Emits
+│   │   └── CampaignCreated event
+│   └── Returns
+│       └── campaignId
+├── Fund Campaign
+│   ├── Reverts
+│   │   ├── If msg.value is 0
+│   │   ├── If campaignId is invalid
+│   │   └── If campaign already ended
+│   ├── Updates
+│   │   ├── amountCollected for the respective campaign
+│   │   └── mapping with campaignId and amount for a funder
+│   └── Emits
+│       └── CamapignFunded event
+└── Withdraw
+    ├── Reverts
+    │   ├── If caller is not the owner of the campaign
+    │   ├── If campaign hasn't ended
+    │   ├── If owner already withdrawn the amount
+    │   └── If campaign wasn't funded
+    ├── Updates
+    │   ├── calimed by owner as true for the campaign
+    │   └── resets amountCollected to 0
+    ├── Emits
+    │   └── WithdrawSuccessful event
+    └── Interactions
+        └── give owner the totalAmount funded for the campaign.

@@ -131,6 +131,9 @@ contract CrowdFunding {
         return s_campaignsCount - 1;
     }
 
+    //////////////////////////////////////////////////////////
+    ////////////////////  Fund Campaign  /////////////////////
+    //////////////////////////////////////////////////////////
     function fundCampaign(uint256 campaignId) external payable {
         if (msg.value == 0) {
             revert CrowdFunding__FundingWith_ZeroAmount();
@@ -171,6 +174,9 @@ contract CrowdFunding {
         emit CamapignFunded(campaignId, msg.sender, msg.value);
     }
 
+    //////////////////////////////////////////////////////////
+    //////////////////////  Withdraw  ////////////////////////
+    //////////////////////////////////////////////////////////
     function withdraw(uint256 campaignId) external {
         address creator = s_campaigns[campaignId].creator;
         if (creator != msg.sender) {
