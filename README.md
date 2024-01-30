@@ -12,38 +12,52 @@ This application allows users to create fundraising campaigns, and other partici
 
 ## Test
 
-```
+```sh
 forge test
 ```
 
+| File                            | % Lines         | % Statements    | % Branches      | % Funcs       |
+| ------------------------------- | --------------- | --------------- | --------------- | ------------- |
+| script/DeployCrowdFunding.s.sol | 100.00% (4/4)   | 100.00% (5/5)   | 100.00% (0/0)   | 100.00% (1/1) |
+| src/CrowdFunding.sol            | 100.00% (58/58) | 100.00% (64/64) | 100.00% (26/26) | 100.00% (9/9) |
+
 or
 
-```
+```sh
 forge test --rpc-url <RPC_URL>
 ```
-
-| File                               | % Lines         | % Statements    | % Branches      | % Funcs         |
-| ---------------------------------- | --------------- | --------------- | --------------- | --------------- |
-| script/DeployCrowdFunding.s.sol    | 100.00% (4/4)   | 100.00% (5/5)   | 100.00% (0/0)   | 100.00% (1/1)   |
-| src/CrowdFunding.sol               | 100.00% (58/58) | 100.00% (64/64) | 100.00% (26/26) | 100.00% (9/9)   |
-| test/mocks/MocksWithdrawFailed.sol | 100.00% (1/1)   | 100.00% (1/1)   | 100.00% (0/0)   | 100.00% (1/1)   |
-| Total                              | 100.00% (63/63) | 100.00% (70/70) | 100.00% (26/26) | 100.00% (11/11) |
 
 ## Deployment
 
 -   To deploy to Anvil
 -   Start the anvil chain
 
-```
+```sh
 make deployToAnvil
 ```
 
 or
 
--   Deploy to a Testnet
+## Deployment to a testnet or mainnet
 
-```
-make deployToPolygonMumbai
+1. Setup environment variables
+
+-   You'll want to set your `SEPOLIA_RPC_URL` in environment variables. You can add them to a `.env` file, similar to what you see in `.env.example`.
+
+2. Use wallet options to Encrypt Private Keys
+
+-   [Private Key Encryption](https://github.com/allwin199/foundry-fundamendals/blob/main/DeploymentDetails.md)
+
+Optionally, add your `ETHERSCAN_API_KEY` if you want to verify your contract on [Etherscan](https://etherscan.io/).
+
+### Get testnet ETH
+
+Head over to [faucets.chain.link](https://faucets.chain.link/) and get some testnet ETH. You should see the ETH show up in your metamask.
+
+### Deploy
+
+```sh
+make deployToSepolia
 ```
 
 ---
