@@ -411,4 +411,59 @@ contract CrowdFundingTest is Test {
         crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
         vm.stopPrank();
     }
+
+    function test_OwnerCanWithdraw_AfterMultipleFunding() public CampaignCreatedAndFunded {
+        for (uint160 i = 1; i < 5; i++) {
+            address newfunder = address(i);
+            hoax(newfunder, STARTING_BALANCE);
+            crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        }
+
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        uint256 startingOwnerBalance = address(user).balance;
+        uint256 campaignBalance = crowdFunding.getCampaign(1).amountCollected;
+
+        vm.startPrank(user);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+
+        uint256 endingOwnerBalance = address(user).balance;
+
+        assertEq(endingOwnerBalance, startingOwnerBalance + campaignBalance);
+    }
+
+    function test_UserCanCreate_MultipleCampaigns() public {
+        vm.startPrank(user);
+
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+
+        crowdFunding.createCampaign("campaign 2", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+
+        crowdFunding.createCampaign("campaign 3", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+
+        vm.stopPrank();
+
+        vm.startPrank(funder);
+        crowdFunding.fundCampaign{value: (FUNDING_AMOUNT / 2)}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(2);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        uint256 startingOwnerBalance = address(user).balance;
+        uint256 campaign1Balance = crowdFunding.getCampaign(1).amountCollected;
+        uint256 campaign2Balance = crowdFunding.getCampaign(2).amountCollected;
+
+        vm.startPrank(user);
+        crowdFunding.withdraw(2);
+        vm.stopPrank();
+
+        uint256 endingOwnerBalance = address(user).balance;
+
+        assertEq(endingOwnerBalance, startingOwnerBalance + campaign2Balance, "ownerBalance");
+        assertEq(campaign1Balance, (FUNDING_AMOUNT / 2), "campaign1Balance");
+    }
 }
