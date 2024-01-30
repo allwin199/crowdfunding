@@ -30,3 +30,22 @@ forge test --rpc-url <RPC_URL>
 | Total                              | 100.00% (63/63) | 100.00% (70/70) | 100.00% (26/26) | 100.00% (11/11) |
 
 ## Deployment
+
+-   To deploy to Anvil
+-   Start the anvil chain
+
+```
+make deployToAnvil
+```
+
+or
+
+-   Deploy to a Testnet
+
+```
+make deployToPolygonMumbai
+```
+
+---
+
+# ThankYou :)
