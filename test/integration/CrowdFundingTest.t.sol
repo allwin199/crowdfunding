@@ -98,6 +98,58 @@ contract CrowdFundingTest is Test {
         assertEq(totalCampaigns, 1);
     }
 
+    function test_UserCan_CreateCampaign_UpdatesCampaignsArray() public {
+        vm.startPrank(user);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
+        CrowdFunding.Campaign[] memory campaigns = crowdFunding.getCampaigns();
+        uint256 totalCampaigns = crowdFunding.getTotalCampaigns();
+
+        assertEq(campaigns.length, totalCampaigns);
+    }
+
+    function test_UserCan_CreateCampaign_UpdatesMapping() public {
+        vm.startPrank(user);
+        uint256 campaignId =
+            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
+        CrowdFunding.Campaign memory currentCampaign = crowdFunding.getCampaign(campaignId);
+
+        assertEq(currentCampaign.name, CAMPAIGN_NAME);
+    }
+
+    function test_UserCan_CreateCampaign_UpdatesCreatorMapping() public {
+        vm.startPrank(user);
+        uint256 campaignId =
+            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+
+        CrowdFunding.Campaign[] memory campaignCreatedByUser = crowdFunding.getCampaignsCreatedByUser();
+
+        vm.stopPrank();
+        uint256 currentCampaignId = campaignCreatedByUser[0].id;
+
+        assertEq(currentCampaignId, campaignId);
+    }
+
+    function test_UserCan_CreateMultipleCampaigns_UpdatesCreatorMapping() public {
+        vm.startPrank(user);
+
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+
+        crowdFunding.createCampaign("campaign 2", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+
+        crowdFunding.createCampaign("campaign 3", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+
+        CrowdFunding.Campaign[] memory campaignCreatedByUser = crowdFunding.getCampaignsCreatedByUser();
+
+        vm.stopPrank();
+        uint256 currentCampaignId = campaignCreatedByUser[1].id;
+
+        assertEq(currentCampaignId, 2);
+    }
+
     function test_UserCan_CreateCampaign_EmitsEvent() public {
         uint256 totalCampaigns = crowdFunding.getTotalCampaigns();
         vm.startPrank(user);
@@ -162,6 +214,15 @@ contract CrowdFundingTest is Test {
 
         uint256 funderFunded = crowdFunding.getFunderInfo(1, funder);
         assertEq(funderFunded, FUNDING_AMOUNT);
+    }
+
+    function test_FunderCan_FundCampaignAnd_UpdatesFundersArray() public CampaignCreatedByUser {
+        vm.startPrank(funder);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        vm.stopPrank();
+
+        address[] memory funders = crowdFunding.getFunders(1);
+        assertEq(funders[0], funder);
     }
 
     function test_FunderCan_FundCampaign_EmitsEvent() public CampaignCreatedByUser {
@@ -297,6 +358,20 @@ contract CrowdFundingTest is Test {
         vm.startPrank(mockUser);
         vm.expectRevert(CrowdFunding.CrowdFunding__WithdrawFailed.selector);
         crowdFunding.withdraw(1);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_CampaignAlreadyEnded() public CampaignCreatedAndFunded {
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(user);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+
+        vm.startPrank(funder);
+        vm.expectRevert(CrowdFunding.CrowdFunding__CampaignAlreadyEnded.selector);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
         vm.stopPrank();
     }
 }

@@ -47,6 +47,7 @@ contract CrowdFunding {
     //////////////////////////////////////////////////////////
     struct Campaign {
         address payable creator;
+        uint256 id;
         string name;
         string description;
         uint256 targetAmount;
@@ -68,6 +69,7 @@ contract CrowdFunding {
     //////////////////////////////////////////////////////////
     uint256 private s_campaignsCount = 1;
     mapping(uint256 campaignId => Campaign) private s_campaigns;
+    mapping(address creator => Campaign[] campaigns) private s_campaignCreatedByCreator;
     mapping(uint256 campaignId => mapping(address funders => uint256 amount)) s_addressToAmountFundedByCampaign;
 
     //////////////////////////////////////////////////////////
@@ -104,8 +106,9 @@ contract CrowdFunding {
             revert CrowdFunding_MaxTimeIs_30days();
         }
 
-        s_campaigns[s_campaignsCount] = Campaign({
+        Campaign memory newCampaign = Campaign({
             creator: payable(msg.sender),
+            id: s_campaignsCount,
             name: _name,
             description: _description,
             targetAmount: _targetAmount,
@@ -117,7 +120,11 @@ contract CrowdFunding {
             claimedByOwner: false
         });
 
+        s_campaigns[s_campaignsCount] = newCampaign;
+
         emit CampaignCreated(s_campaignsCount, msg.sender, _targetAmount, _startAt, _endAt);
+
+        s_campaignCreatedByCreator[msg.sender].push(newCampaign);
 
         s_campaignsCount = s_campaignsCount + 1;
 
@@ -206,9 +213,10 @@ contract CrowdFunding {
     }
 
     function getCampaigns() external view returns (Campaign[] memory) {
-        Campaign[] memory allCampaigns = new Campaign[](s_campaignsCount);
+        uint256 totalCampaigns = (s_campaignsCount - 1);
+        Campaign[] memory allCampaigns = new Campaign[](totalCampaigns);
 
-        for (uint256 i = 0; i < s_campaignsCount;) {
+        for (uint256 i = 0; i < totalCampaigns;) {
             allCampaigns[i] = s_campaigns[i];
 
             unchecked {
@@ -230,5 +238,9 @@ contract CrowdFunding {
 
     function getFunderInfo(uint256 campaignId, address funder) external view returns (uint256) {
         return s_addressToAmountFundedByCampaign[campaignId][funder];
+    }
+
+    function getCampaignsCreatedByUser() external view returns (Campaign[] memory) {
+        return s_campaignCreatedByCreator[msg.sender];
     }
 }
