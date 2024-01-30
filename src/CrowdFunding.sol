@@ -37,6 +37,10 @@ contract CrowdFunding {
     error CrowdFunding__WithdrawFailed();
     error CrowdFunding__FundingWith_ZeroAmount();
     error CrowdFunding__InvalidCampaign();
+    error CrowdFunding_MaxTimeIs_30days();
+    error CrowdFunding__BalanceIsZero();
+    error CrowdFunding__AmountAlready_WithdrawnByOwner();
+    error CrowdFunding__CampaignAlreadyEnded();
 
     //////////////////////////////////////////////////////////
     ////////////////  Type Declarations  /////////////////////
@@ -53,6 +57,11 @@ contract CrowdFunding {
         address[] funders;
         bool claimedByOwner;
     }
+
+    //////////////////////////////////////////////////////////
+    ///////////  Constant and Immutable Variables  ///////////
+    //////////////////////////////////////////////////////////
+    uint256 private constant THIRTY_DAYS = 2592000; // 30 * 86400
 
     //////////////////////////////////////////////////////////
     ////////////////  Storage Variables  /////////////////////
@@ -91,6 +100,9 @@ contract CrowdFunding {
         if (_endAt < _startAt) {
             revert CrowdFunding__InvalidTimeline();
         }
+        if (_endAt > THIRTY_DAYS) {
+            revert CrowdFunding_MaxTimeIs_30days();
+        }
 
         s_campaigns[s_campaignsCount] = Campaign({
             creator: payable(msg.sender),
@@ -119,6 +131,10 @@ contract CrowdFunding {
 
         if (s_campaigns[campaignId].creator == address(0)) {
             revert CrowdFunding__InvalidCampaign();
+        }
+
+        if (s_campaigns[campaignId].claimedByOwner) {
+            revert CrowdFunding__CampaignAlreadyEnded();
         }
 
         uint8 newFunder = 1;
@@ -153,11 +169,24 @@ contract CrowdFunding {
         if (creator != msg.sender) {
             revert CrowdFunding__OnlyOwner_CanWithdraw();
         }
+
         if (s_campaigns[campaignId].endAt > block.timestamp) {
             revert CrowdFunding__CampaignNotEnded();
         }
 
+        if (s_campaigns[campaignId].claimedByOwner) {
+            revert CrowdFunding__AmountAlready_WithdrawnByOwner();
+        }
+
+        if (s_campaigns[campaignId].amountCollected == 0) {
+            revert CrowdFunding__BalanceIsZero();
+        }
+
+        s_campaigns[campaignId].claimedByOwner = true;
+
         uint256 totalAmount = s_campaigns[campaignId].amountCollected;
+
+        s_campaigns[campaignId].amountCollected = 0;
 
         emit WithdrawSuccessful(campaignId, msg.sender, totalAmount);
 

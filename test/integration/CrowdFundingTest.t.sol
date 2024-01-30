@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {DeployCrowdFunding} from "../../script/DeployCrowdFunding.s.sol";
 import {CrowdFunding} from "../../src/CrowdFunding.sol";
+import {MocksWithdrawFailed} from "../mocks/MocksWithdrawFailed.sol";
 
 contract CrowdFundingTest is Test {
     //////////////////////////////////////////////////////////
@@ -23,7 +24,8 @@ contract CrowdFundingTest is Test {
     uint256 private constant TARGET_AMOUNT = 10e18;
     uint256 private constant FUNDING_AMOUNT = 1e18;
     uint256 private startAt = block.timestamp;
-    uint256 private endAt = block.timestamp + 10000;
+    uint256 private constant THIRTY_DAYS = 2592000; // 30 * 86400
+    uint256 private endAt = block.timestamp + THIRTY_DAYS - 100;
     string private constant IMAGE = "";
 
     //////////////////////////////////////////////////////////
@@ -76,6 +78,13 @@ contract CrowdFundingTest is Test {
         crowdFunding.createCampaign(
             CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, (block.timestamp), (block.timestamp) - 50, IMAGE
         );
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_CreateCampaign_EndDateMoreThan_30days() public {
+        vm.startPrank(user);
+        vm.expectRevert(CrowdFunding.CrowdFunding_MaxTimeIs_30days.selector);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt + 100, IMAGE);
         vm.stopPrank();
     }
 
@@ -165,15 +174,128 @@ contract CrowdFundingTest is Test {
         vm.stopPrank();
     }
 
-    function test_OwnerCan_Withdraw() public CampaignCreatedByUser {
+    //////////////////////////////////////////////////////////
+    ////////////////////  Withdraw Tests  ////////////////////
+    //////////////////////////////////////////////////////////
+
+    modifier CampaignCreatedAndFunded() {
+        vm.startPrank(user);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
         vm.startPrank(funder);
         crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
         vm.stopPrank();
 
-        vm.warp(block.timestamp + 100000);
+        _;
+    }
+
+    function test_RevertsIf_WithdrawNotCalled_ByOwner() public CampaignCreatedAndFunded {
+        vm.startPrank(funder);
+        vm.expectRevert(CrowdFunding.CrowdFunding__OnlyOwner_CanWithdraw.selector);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_WithdrawCalled_BeforeEndDate() public CampaignCreatedAndFunded {
+        vm.startPrank(user);
+        vm.expectRevert(CrowdFunding.CrowdFunding__CampaignNotEnded.selector);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_WithdrawCalled_ButBalanceZero() public CampaignCreatedByUser {
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
+        vm.expectRevert(CrowdFunding.CrowdFunding__BalanceIsZero.selector);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+    }
+
+    function test_OwnerCan_Withdraw() public CampaignCreatedAndFunded {
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(user);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+    }
+
+    function test_OwnerCanWithdraw_UpdatesOwnerBalance() public CampaignCreatedAndFunded {
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        uint256 startingOwnerBalance = address(user).balance;
+        uint256 campaignBalance = crowdFunding.getCampaign(1).amountCollected;
+
+        vm.startPrank(user);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+
+        uint256 endingOwnerBalance = address(user).balance;
+
+        assertEq(endingOwnerBalance, startingOwnerBalance + campaignBalance);
+    }
+
+    function test_OwnerCanWithdraw_UpdatesCampaignBalance() public CampaignCreatedAndFunded {
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(user);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+
+        uint256 campaignBalance = crowdFunding.getCampaign(1).amountCollected;
+
+        assertEq(campaignBalance, 0);
+    }
+
+    function test_OwnerAlready_Withdrawn() public CampaignCreatedAndFunded {
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(user);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        vm.expectRevert(CrowdFunding.CrowdFunding__AmountAlready_WithdrawnByOwner.selector);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+    }
+
+    function test_OwnerCan_Withdraw_EmitsEvent() public CampaignCreatedAndFunded {
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        uint256 campaignBalance = crowdFunding.getCampaign(1).amountCollected;
+
+        vm.startPrank(user);
+        vm.expectEmit(true, true, true, false, address(crowdFunding));
+        emit WithdrawSuccessful(1, user, campaignBalance);
+        crowdFunding.withdraw(1);
+        vm.stopPrank();
+    }
+
+    function test_WithdrawFailed() public {
+        MocksWithdrawFailed mocksWithdrawFailed = new MocksWithdrawFailed();
+        address mockUser = address(mocksWithdrawFailed);
+
+        vm.startPrank(mockUser);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
+        vm.startPrank(funder);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(mockUser);
+        vm.expectRevert(CrowdFunding.CrowdFunding__WithdrawFailed.selector);
         crowdFunding.withdraw(1);
         vm.stopPrank();
     }
