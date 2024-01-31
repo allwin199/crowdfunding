@@ -67,7 +67,7 @@ contract CrowdFunding {
     //////////////////////////////////////////////////////////
     ////////////////  Storage Variables  /////////////////////
     //////////////////////////////////////////////////////////
-    uint256 private s_campaignsCount = 1;
+    uint256 private s_campaignsCount;
     mapping(uint256 campaignId => Campaign) private s_campaigns;
     mapping(address creator => Campaign[] campaigns) private s_campaignCreatedByCreator;
     mapping(uint256 campaignId => mapping(address funders => uint256 amount)) s_addressToAmountFundedByCampaign;
@@ -121,7 +121,7 @@ contract CrowdFunding {
 
         s_campaignsCount = s_campaignsCount + 1;
 
-        return s_campaignsCount - 1;
+        return s_campaignsCount;
     }
 
     //////////////////////////////////////////////////////////
@@ -206,16 +206,15 @@ contract CrowdFunding {
     //////////////////  Getter Functions  ////////////////////
     //////////////////////////////////////////////////////////
     function getTotalCampaigns() external view returns (uint256) {
-        return s_campaignsCount - 1;
+        return s_campaignsCount;
         // since s_campaignsCount starting from 1
         // to get the actual campaignCount we have to subtract by 1
     }
 
     function getCampaigns() external view returns (Campaign[] memory) {
-        uint256 totalCampaigns = (s_campaignsCount - 1);
-        Campaign[] memory allCampaigns = new Campaign[](totalCampaigns);
+        Campaign[] memory allCampaigns = new Campaign[](s_campaignsCount);
 
-        for (uint256 i = 0; i < totalCampaigns;) {
+        for (uint256 i = 0; i < s_campaignsCount;) {
             allCampaigns[i] = s_campaigns[i];
 
             unchecked {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {DeployCrowdFunding} from "../../script/DeployCrowdFunding.s.sol";
 import {CrowdFunding} from "../../src/CrowdFunding.sol";
 import {MocksWithdrawFailed} from "../mocks/MocksWithdrawFailed.sol";
@@ -89,12 +89,11 @@ contract CrowdFundingTest is Test {
 
     function test_UserCan_CreateCampaign_ReturnsCamapignId() public {
         vm.startPrank(user);
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
+        uint256 campaignId =
+            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
 
-        uint256 totalCampaigns = crowdFunding.getTotalCampaigns();
-
-        assertEq(totalCampaigns, 1);
+        assertEq(campaignId, 1);
     }
 
     function test_UserCan_CreateCampaign_UpdatesCampaignsArray() public {
@@ -110,26 +109,24 @@ contract CrowdFundingTest is Test {
 
     function test_UserCan_CreateCampaign_UpdatesMapping() public {
         vm.startPrank(user);
-        uint256 campaignId =
-            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
 
-        CrowdFunding.Campaign memory currentCampaign = crowdFunding.getCampaign(campaignId);
+        CrowdFunding.Campaign memory currentCampaign = crowdFunding.getCampaign(0);
 
         assertEq(currentCampaign.name, CAMPAIGN_NAME);
     }
 
     function test_UserCan_CreateCampaign_UpdatesCreatorMapping() public {
         vm.startPrank(user);
-        uint256 campaignId =
-            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
 
         CrowdFunding.Campaign[] memory campaignCreatedByUser = crowdFunding.getCampaignsCreatedByUser();
 
         vm.stopPrank();
         uint256 currentCampaignId = campaignCreatedByUser[0].id;
 
-        assertEq(currentCampaignId, campaignId);
+        assertEq(currentCampaignId, 0);
     }
 
     function test_UserCan_CreateMultipleCampaigns_UpdatesCreatorMapping() public {
@@ -146,14 +143,14 @@ contract CrowdFundingTest is Test {
         vm.stopPrank();
         uint256 currentCampaignId = campaignCreatedByUser[1].id;
 
-        assertEq(currentCampaignId, 2);
+        assertEq(currentCampaignId, 1);
     }
 
     function test_UserCan_CreateCampaign_EmitsEvent() public {
         uint256 totalCampaigns = crowdFunding.getTotalCampaigns();
         vm.startPrank(user);
         vm.expectEmit(true, true, true, false, address(crowdFunding)); // crowFunding contract will emit this event
-        emit CampaignCreated(totalCampaigns + 1, user, TARGET_AMOUNT, startAt, endAt);
+        emit CampaignCreated(totalCampaigns, user, TARGET_AMOUNT, startAt, endAt);
         crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
     }
@@ -189,75 +186,77 @@ contract CrowdFundingTest is Test {
     }
 
     function test_FunderCan_FundCampaign() public CampaignCreatedByUser {
+        uint256 totalCampaigns = crowdFunding.getTotalCampaigns();
+        console.log("totalCampaigns", totalCampaigns);
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
-        address[] memory fundersList = crowdFunding.getFunders(1);
+        address[] memory fundersList = crowdFunding.getFunders(0);
         assertEq(fundersList[0], funder);
     }
 
     function test_FunderCan_FundCampaignAnd_UpdatesBalance() public CampaignCreatedByUser {
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
-        uint256 totalAmountInCampaign = crowdFunding.getCampaign(1).amountCollected;
+        uint256 totalAmountInCampaign = crowdFunding.getCampaign(0).amountCollected;
         assertEq(totalAmountInCampaign, FUNDING_AMOUNT);
     }
 
     function test_FunderCan_FundCampaignAnd_UpdatesFundersMapping() public CampaignCreatedByUser {
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
-        uint256 funderFunded = crowdFunding.getFunderInfo(1, funder);
+        uint256 funderFunded = crowdFunding.getFunderInfo(0, funder);
         assertEq(funderFunded, FUNDING_AMOUNT);
     }
 
     function test_FunderCan_FundCampaignAnd_UpdatesFundersArray() public CampaignCreatedByUser {
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
-        address[] memory funders = crowdFunding.getFunders(1);
+        address[] memory funders = crowdFunding.getFunders(0);
         assertEq(funders[0], funder);
     }
 
     function test_FunderCan_FundCampaignAnd_UpdatesFundersLength() public CampaignCreatedByUser {
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
-        address[] memory funders = crowdFunding.getFunders(1);
+        address[] memory funders = crowdFunding.getFunders(0);
         assertEq(funders.length, 1);
     }
 
     function test_FundersLength_ShouldNotChange_ForOldFunder() public CampaignCreatedByUser {
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
-        address[] memory funders = crowdFunding.getFunders(1);
+        address[] memory funders = crowdFunding.getFunders(0);
         assertEq(funders.length, 1);
     }
 
     function test_FundersLength_ShouldChange_ForNewFunder() public CampaignCreatedByUser {
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
         address newFunder = makeAddr("newFunder");
         vm.deal(newFunder, STARTING_BALANCE);
         vm.startPrank(newFunder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
-        address[] memory funders = crowdFunding.getFunders(1);
+        address[] memory funders = crowdFunding.getFunders(0);
         assertEq(funders.length, 2);
     }
 
@@ -265,8 +264,8 @@ contract CrowdFundingTest is Test {
         vm.startPrank(funder);
 
         vm.expectEmit(true, true, true, false, address(crowdFunding));
-        emit CamapignFunded(1, funder, FUNDING_AMOUNT);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        emit CamapignFunded(0, funder, FUNDING_AMOUNT);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
 
         vm.stopPrank();
     }
@@ -281,7 +280,7 @@ contract CrowdFundingTest is Test {
         vm.stopPrank();
 
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
         _;
@@ -290,14 +289,14 @@ contract CrowdFundingTest is Test {
     function test_RevertsIf_WithdrawNotCalled_ByOwner() public CampaignCreatedAndFunded {
         vm.startPrank(funder);
         vm.expectRevert(CrowdFunding.CrowdFunding__OnlyOwner_CanWithdraw.selector);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
     }
 
     function test_RevertsIf_WithdrawCalled_BeforeEndDate() public CampaignCreatedAndFunded {
         vm.startPrank(user);
         vm.expectRevert(CrowdFunding.CrowdFunding__CampaignNotEnded.selector);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
     }
 
@@ -307,7 +306,7 @@ contract CrowdFundingTest is Test {
 
         vm.startPrank(user);
         vm.expectRevert(CrowdFunding.CrowdFunding__BalanceIsZero.selector);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
     }
 
@@ -316,7 +315,7 @@ contract CrowdFundingTest is Test {
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
     }
 
@@ -325,10 +324,10 @@ contract CrowdFundingTest is Test {
         vm.roll(block.number + 1);
 
         uint256 startingOwnerBalance = address(user).balance;
-        uint256 campaignBalance = crowdFunding.getCampaign(1).amountCollected;
+        uint256 campaignBalance = crowdFunding.getCampaign(0).amountCollected;
 
         vm.startPrank(user);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
 
         uint256 endingOwnerBalance = address(user).balance;
@@ -341,10 +340,10 @@ contract CrowdFundingTest is Test {
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
 
-        uint256 campaignBalance = crowdFunding.getCampaign(1).amountCollected;
+        uint256 campaignBalance = crowdFunding.getCampaign(0).amountCollected;
 
         assertEq(campaignBalance, 0);
     }
@@ -354,12 +353,12 @@ contract CrowdFundingTest is Test {
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
 
         vm.startPrank(user);
         vm.expectRevert(CrowdFunding.CrowdFunding__AmountAlready_WithdrawnByOwner.selector);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
     }
 
@@ -367,12 +366,12 @@ contract CrowdFundingTest is Test {
         vm.warp(block.timestamp + THIRTY_DAYS + 1);
         vm.roll(block.number + 1);
 
-        uint256 campaignBalance = crowdFunding.getCampaign(1).amountCollected;
+        uint256 campaignBalance = crowdFunding.getCampaign(0).amountCollected;
 
         vm.startPrank(user);
         vm.expectEmit(true, true, true, false, address(crowdFunding));
-        emit WithdrawSuccessful(1, user, campaignBalance);
-        crowdFunding.withdraw(1);
+        emit WithdrawSuccessful(0, user, campaignBalance);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
     }
 
@@ -385,7 +384,7 @@ contract CrowdFundingTest is Test {
         vm.stopPrank();
 
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
 
         vm.warp(block.timestamp + THIRTY_DAYS + 1);
@@ -393,7 +392,7 @@ contract CrowdFundingTest is Test {
 
         vm.startPrank(mockUser);
         vm.expectRevert(CrowdFunding.CrowdFunding__WithdrawFailed.selector);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
     }
 
@@ -402,12 +401,12 @@ contract CrowdFundingTest is Test {
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
 
         vm.startPrank(funder);
         vm.expectRevert(CrowdFunding.CrowdFunding__CampaignAlreadyEnded.selector);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         vm.stopPrank();
     }
 
@@ -415,17 +414,17 @@ contract CrowdFundingTest is Test {
         for (uint160 i = 1; i < 5; i++) {
             address newfunder = address(i);
             hoax(newfunder, STARTING_BALANCE);
-            crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
+            crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(0);
         }
 
         vm.warp(block.timestamp + THIRTY_DAYS + 1);
         vm.roll(block.number + 1);
 
         uint256 startingOwnerBalance = address(user).balance;
-        uint256 campaignBalance = crowdFunding.getCampaign(1).amountCollected;
+        uint256 campaignBalance = crowdFunding.getCampaign(0).amountCollected;
 
         vm.startPrank(user);
-        crowdFunding.withdraw(1);
+        crowdFunding.withdraw(0);
         vm.stopPrank();
 
         uint256 endingOwnerBalance = address(user).balance;
@@ -445,19 +444,19 @@ contract CrowdFundingTest is Test {
         vm.stopPrank();
 
         vm.startPrank(funder);
-        crowdFunding.fundCampaign{value: (FUNDING_AMOUNT / 2)}(1);
-        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(2);
+        crowdFunding.fundCampaign{value: (FUNDING_AMOUNT / 2)}(0);
+        crowdFunding.fundCampaign{value: FUNDING_AMOUNT}(1);
         vm.stopPrank();
 
         vm.warp(block.timestamp + THIRTY_DAYS + 1);
         vm.roll(block.number + 1);
 
         uint256 startingOwnerBalance = address(user).balance;
-        uint256 campaign1Balance = crowdFunding.getCampaign(1).amountCollected;
-        uint256 campaign2Balance = crowdFunding.getCampaign(2).amountCollected;
+        uint256 campaign1Balance = crowdFunding.getCampaign(0).amountCollected;
+        uint256 campaign2Balance = crowdFunding.getCampaign(1).amountCollected;
 
         vm.startPrank(user);
-        crowdFunding.withdraw(2);
+        crowdFunding.withdraw(1);
         vm.stopPrank();
 
         uint256 endingOwnerBalance = address(user).balance;
