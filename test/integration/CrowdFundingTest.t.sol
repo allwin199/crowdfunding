@@ -26,7 +26,8 @@ contract CrowdFundingTest is Test {
     uint256 private startAt = block.timestamp;
     uint256 private constant THIRTY_DAYS = 2592000; // 30 * 86400
     uint256 private endAt = block.timestamp + THIRTY_DAYS - 100;
-    string private constant IMAGE = "";
+    string private constant IMAGE =
+        "https://www.mygoldenretrieverpuppies.com/wp-content/uploads/2022/06/Golden-Retriever-Puppies.jpeg";
 
     //////////////////////////////////////////////////////////
     //////////////////////   Events  /////////////////////////
@@ -59,38 +60,36 @@ contract CrowdFundingTest is Test {
         assertEq(totalCampaigns, 0);
     }
 
-    function test_RevertsIf_CreateCampaign_StartDateIs_NotInPresent() public {
-        vm.startPrank(user);
-        vm.warp(block.timestamp + 100);
-        vm.roll(block.number + 1);
-        vm.expectRevert(CrowdFunding.CrowdFunding__StartDate_ShouldBeInPresent.selector);
-        crowdFunding.createCampaign(
-            CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, (block.timestamp) - 50, endAt, IMAGE
-        );
-        vm.stopPrank();
-    }
+    // function test_RevertsIf_CreateCampaign_StartDateIs_NotInPresent() public {
+    //     vm.startPrank(user);
+    //     vm.warp(block.timestamp + 100);
+    //     vm.roll(block.number + 1);
+    //     vm.expectRevert(CrowdFunding.CrowdFunding__StartDate_ShouldBeInPresent.selector);
+    //     crowdFunding.createCampaign(
+    //         CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, (block.timestamp) - 50, endAt, IMAGE
+    //     );
+    //     vm.stopPrank();
+    // }
 
     function test_RevertsIf_CreateCampaign_EndDateLessThan_StartDate() public {
         vm.startPrank(user);
         vm.warp(block.timestamp + 100);
         vm.roll(block.number + 1);
         vm.expectRevert(CrowdFunding.CrowdFunding__InvalidTimeline.selector);
-        crowdFunding.createCampaign(
-            CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, (block.timestamp), (block.timestamp) - 50, IMAGE
-        );
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, (block.timestamp) - 50, IMAGE);
         vm.stopPrank();
     }
 
-    function test_RevertsIf_CreateCampaign_EndDateMoreThan_30days() public {
-        vm.startPrank(user);
-        vm.expectRevert(CrowdFunding.CrowdFunding_MaxTimeIs_30days.selector);
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt + 100, IMAGE);
-        vm.stopPrank();
-    }
+    // function test_RevertsIf_CreateCampaign_EndDateMoreThan_30days() public {
+    //     vm.startPrank(user);
+    //     vm.expectRevert(CrowdFunding.CrowdFunding_MaxTimeIs_30days.selector);
+    //     crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt + 101, IMAGE);
+    //     vm.stopPrank();
+    // }
 
     function test_UserCan_CreateCampaign_ReturnsCamapignId() public {
         vm.startPrank(user);
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
 
         uint256 totalCampaigns = crowdFunding.getTotalCampaigns();
@@ -100,7 +99,7 @@ contract CrowdFundingTest is Test {
 
     function test_UserCan_CreateCampaign_UpdatesCampaignsArray() public {
         vm.startPrank(user);
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
 
         CrowdFunding.Campaign[] memory campaigns = crowdFunding.getCampaigns();
@@ -112,7 +111,7 @@ contract CrowdFundingTest is Test {
     function test_UserCan_CreateCampaign_UpdatesMapping() public {
         vm.startPrank(user);
         uint256 campaignId =
-            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
 
         CrowdFunding.Campaign memory currentCampaign = crowdFunding.getCampaign(campaignId);
@@ -123,7 +122,7 @@ contract CrowdFundingTest is Test {
     function test_UserCan_CreateCampaign_UpdatesCreatorMapping() public {
         vm.startPrank(user);
         uint256 campaignId =
-            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+            crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
 
         CrowdFunding.Campaign[] memory campaignCreatedByUser = crowdFunding.getCampaignsCreatedByUser();
 
@@ -136,11 +135,11 @@ contract CrowdFundingTest is Test {
     function test_UserCan_CreateMultipleCampaigns_UpdatesCreatorMapping() public {
         vm.startPrank(user);
 
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
 
-        crowdFunding.createCampaign("campaign 2", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign("campaign 2", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
 
-        crowdFunding.createCampaign("campaign 3", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign("campaign 3", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
 
         CrowdFunding.Campaign[] memory campaignCreatedByUser = crowdFunding.getCampaignsCreatedByUser();
 
@@ -155,13 +154,13 @@ contract CrowdFundingTest is Test {
         vm.startPrank(user);
         vm.expectEmit(true, true, true, false, address(crowdFunding)); // crowFunding contract will emit this event
         emit CampaignCreated(totalCampaigns + 1, user, TARGET_AMOUNT, startAt, endAt);
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
     }
 
     modifier CampaignCreatedByUser() {
         vm.startPrank(user);
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
         _;
     }
@@ -278,7 +277,7 @@ contract CrowdFundingTest is Test {
 
     modifier CampaignCreatedAndFunded() {
         vm.startPrank(user);
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
 
         vm.startPrank(funder);
@@ -382,7 +381,7 @@ contract CrowdFundingTest is Test {
         address mockUser = address(mocksWithdrawFailed);
 
         vm.startPrank(mockUser);
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
         vm.stopPrank();
 
         vm.startPrank(funder);
@@ -437,11 +436,11 @@ contract CrowdFundingTest is Test {
     function test_UserCanCreate_MultipleCampaigns() public {
         vm.startPrank(user);
 
-        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
 
-        crowdFunding.createCampaign("campaign 2", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign("campaign 2", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
 
-        crowdFunding.createCampaign("campaign 3", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        crowdFunding.createCampaign("campaign 3", CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, endAt, IMAGE);
 
         vm.stopPrank();
 

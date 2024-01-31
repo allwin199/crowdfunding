@@ -92,18 +92,11 @@ contract CrowdFunding {
         string memory _name,
         string memory _description,
         uint256 _targetAmount,
-        uint256 _startAt,
         uint256 _endAt,
         string memory _image
     ) external returns (uint256) {
-        if (_startAt < block.timestamp) {
-            revert CrowdFunding__StartDate_ShouldBeInPresent();
-        }
-        if (_endAt < _startAt) {
+        if (_endAt < block.timestamp) {
             revert CrowdFunding__InvalidTimeline();
-        }
-        if (_endAt > THIRTY_DAYS) {
-            revert CrowdFunding_MaxTimeIs_30days();
         }
 
         Campaign memory newCampaign = Campaign({
@@ -113,7 +106,7 @@ contract CrowdFunding {
             description: _description,
             targetAmount: _targetAmount,
             amountCollected: 0,
-            startAt: _startAt,
+            startAt: block.timestamp,
             endAt: _endAt,
             image: _image,
             funders: new address[](0),
@@ -122,7 +115,7 @@ contract CrowdFunding {
 
         s_campaigns[s_campaignsCount] = newCampaign;
 
-        emit CampaignCreated(s_campaignsCount, msg.sender, _targetAmount, _startAt, _endAt);
+        emit CampaignCreated(s_campaignsCount, msg.sender, _targetAmount, block.timestamp, _endAt);
 
         s_campaignCreatedByCreator[msg.sender].push(newCampaign);
 
