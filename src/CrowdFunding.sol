@@ -52,6 +52,7 @@ contract CrowdFunding {
         string description;
         uint256 targetAmount;
         uint256 amountCollected;
+        uint256 amountWithdrawnByOwner;
         uint256 startAt;
         uint256 endAt;
         string image;
@@ -106,6 +107,7 @@ contract CrowdFunding {
             description: _description,
             targetAmount: _targetAmount,
             amountCollected: 0,
+            amountWithdrawnByOwner: 0,
             startAt: block.timestamp,
             endAt: _endAt,
             image: _image,
@@ -176,7 +178,10 @@ contract CrowdFunding {
             revert CrowdFunding__OnlyOwner_CanWithdraw();
         }
 
-        if (block.timestamp < s_campaigns[campaignId].endAt) {
+        uint256 currentTime = block.timestamp;
+        uint256 campaignEndTime = s_campaigns[campaignId].endAt;
+
+        if (currentTime < campaignEndTime) {
             revert CrowdFunding__CampaignNotEnded();
         }
 
@@ -192,6 +197,7 @@ contract CrowdFunding {
 
         uint256 totalAmount = s_campaigns[campaignId].amountCollected;
 
+        s_campaigns[campaignId].amountWithdrawnByOwner = totalAmount;
         s_campaigns[campaignId].amountCollected = 0;
 
         emit WithdrawSuccessful(campaignId, msg.sender, totalAmount);

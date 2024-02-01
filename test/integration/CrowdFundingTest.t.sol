@@ -314,6 +314,12 @@ contract CrowdFundingTest is Test {
         vm.warp(block.timestamp + THIRTY_DAYS + 100);
         vm.roll(block.number + 1);
 
+        // uint256 campaignEnd = crowdFunding.getCampaign(0).endAt;
+
+        // console.log("Time", block.timestamp);
+        // console.log("camp", campaignEnd);
+        // console.log("diff", block.timestamp > campaignEnd);
+
         vm.startPrank(user);
         crowdFunding.withdraw(0);
         vm.stopPrank();
