@@ -176,7 +176,7 @@ contract CrowdFunding {
             revert CrowdFunding__OnlyOwner_CanWithdraw();
         }
 
-        if (s_campaigns[campaignId].endAt > block.timestamp) {
+        if (block.timestamp < s_campaigns[campaignId].endAt) {
             revert CrowdFunding__CampaignNotEnded();
         }
 

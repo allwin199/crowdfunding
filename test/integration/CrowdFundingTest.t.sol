@@ -311,7 +311,7 @@ contract CrowdFundingTest is Test {
     }
 
     function test_OwnerCan_Withdraw() public CampaignCreatedAndFunded {
-        vm.warp(block.timestamp + THIRTY_DAYS + 1);
+        vm.warp(block.timestamp + THIRTY_DAYS + 100);
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
